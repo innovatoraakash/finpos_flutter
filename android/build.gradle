@@ -1,0 +1,61 @@
+group 'com.example.finpos_flutter'
+version '1.0'
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+//        //Add this below <plugin_name> is whatever your plugin is called eg. url_launcher
+//        flatDir {
+//             dirs 'libs'
+//             dirs project(':finpos_flutter').file('libs')
+//            // e.g. dirs project(':url_launcher').file('libs')  - don't miss the ':'
+//        }
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:7.3.0'
+    }
+
+}
+
+rootProject.allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+apply plugin: 'com.android.library'
+
+android {
+    compileSdkVersion 31
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    defaultConfig {
+        minSdkVersion 16
+    }
+
+    dependencies {
+        testImplementation 'junit:junit:4.13.2'
+        testImplementation 'org.mockito:mockito-core:5.0.0'
+        implementation(files("libs/payment-sdk-v1.1.0.aar"))
+        implementation(files("libs/finpos-smart-sdk-v1.1.8.aar"))
+
+//         implementation (name: 'payment-sdk-v1.1.0', ext: 'aar')
+    }
+
+    testOptions {
+        unitTests.all {
+            testLogging {
+               events "passed", "skipped", "failed", "standardOut", "standardError"
+               outputs.upToDateWhen {false}
+               showStandardStreams = true
+            }
+        }
+    }
+}
