@@ -1,11 +1,16 @@
 package com.example.finpos_flutter;
 
 import android.app.Activity;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import com.example.finpos_flutter.print.PrintHelper;
+
 import global.citytech.finpossmart.sdk.FinPosSmartSdk;
 import global.citytech.finpossmart.sdk.api.SmartSdk;
+import global.citytech.finpossmart.sdk.api.printer.PrintRequest;
+import global.citytech.finpossmart.sdk.api.printer.PrinterResponse;
 import global.citytech.payment.sdk.api.PaymentService;
 import global.citytech.payment.sdk.api.PosPaymentApi;
 import global.citytech.payment.sdk.api.PosPaymentConfiguration;
@@ -28,6 +33,9 @@ public class FinposFlutterPlugin implements FlutterPlugin, MethodCallHandler, Ac
     private MethodChannel channel;
     private Activity activity;
 
+    SmartSdk smartSdk;
+    PaymentService paymentService;
+
     @Override
     public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
         channel = new MethodChannel(flutterPluginBinding.getBinaryMessenger(), "finpos_flutter");
@@ -36,19 +44,59 @@ public class FinposFlutterPlugin implements FlutterPlugin, MethodCallHandler, Ac
 
     @Override
     public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
-        SmartSdk smartSdk;
-        PaymentService paymentService;
-        if (call.method.equals("getPlatformVersion")) {
-            result.success("Android " + android.os.Build.VERSION.RELEASE);
-        } else if (call.method.equals("posPaymentSdkInitialize")) {
-            paymentService = PosPaymentApi.getInstance(activity, new PosPaymentConfiguration("dynamic", "1", "test", "test"));
-            smartSdk = FinPosSmartSdk.getInstance(activity);
-            result.success("Android iniialization success");
-        } else if (call.method.equals("finPosSdkInitialize")) {
-            smartSdk = FinPosSmartSdk.getInstance(activity);
-            result.success("Android " + android.os.Build.VERSION.RELEASE);
-        } else {
-            result.notImplemented();
+        switch (call.method) {
+            case "getPlatformVersion":
+                result.success("Android " + android.os.Build.VERSION.RELEASE);
+                break;
+            case "initializeSdks":
+                paymentService = PosPaymentApi.getInstance(activity, new PosPaymentConfiguration("dynamic", "1", "test", "test"));
+                smartSdk = FinPosSmartSdk.getInstance(activity);
+                result.success("Sdks initialization success");
+                break;
+            case "feedPaper":
+                Thread feedPaperThread = new Thread() {
+                    @Override
+                    public void run() {
+                        super.run();
+                        smartSdk.feedPaper(10);
+                    }
+                };
+                feedPaperThread.start();
+                break;
+            case "checkPrinterStatus":
+                Thread printerStatusThread = new Thread() {
+                    @Override
+                    public void run() {
+                        super.run();
+                        PrinterResponse printResponse = smartSdk.getPrinterStatus();
+                        Log.d("FINPOS", "Print Result::: " + printResponse.getResult().getMessage());
+                        Log.d("FINPOS", "Print Message:::" + printResponse.getMessage());
+                    }
+                };
+                printerStatusThread.start();
+                break;
+            case "startPrinting":
+                Thread printThread = new Thread() {
+                    @Override
+                    public void run() {
+                        super.run();
+                        try {
+                            PrintRequest printRequest = PrintHelper.preparePrintRequest(activity);
+                            PrinterResponse printResponse = smartSdk.print(printRequest);
+                            Log.d("FINPOS", "Print Result::: " + printResponse.getResult().getMessage());
+                            Log.d("FINPOS", "Print Message:::" + printResponse.getMessage());
+
+                        } catch (Exception exception) {
+                            exception.printStackTrace();
+                            Log.d("FINPOS", "Print Message:::" + exception.getMessage());
+                        }
+                    }
+                };
+                printThread.start();
+                break;
+            default:
+                result.notImplemented();
+                break;
         }
     }
 
